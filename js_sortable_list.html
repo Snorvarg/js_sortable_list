@@ -1,0 +1,340 @@
+<html>
+  <!-- 
+    js_sortable_list: A html table where each column can be sorted by clicking it's header. Also a search-box where the rows are filtered on the written text.
+    
+    https://github.com/madskullcreations/js_sortable_list
+    
+    Copyright (c) 2018, Madskull Creations AB (https://www.madskullcreations.com)
+    Released under the MIT-License
+    
+    Usage: To define your own table:
+      1. Give each column a unique name in the header, see below. 
+      2. Fill up with your rows, and make sure the div "hidden-data" contains each rows data for sorting. NOTE: Use lower case, because the search use lower case.
+      3. Define each columns datatype in the js-object dataTypes. This is for sorting to work. (string-wise or number-wise)
+      
+      That's it! You should not need to change anything in the javascript-functions for the sorting and filtering to work.
+      
+      NOTE: Since jqLotsOfRows contains each row in the table, it might use up a lot of memory if it contains many rows. 
+        Also, the speed is affected, more rows slower sorting. 
+        But for any 'normal' use-case this should be really quick.
+  -->
+<head>
+  <meta charset="utf-8">
+  
+  <!--It is a better idea to download jquery.js instead of direct link like this-->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+  <style>
+    /* NOTE: Extracted from Zurb Foundation, it is a good idea to remove this and use their framework straight off since it is great stuff! */
+    .grid-x{
+      display: flex;
+    }
+    .align-stretch{
+      align-items: stretch;
+    }
+    
+    .cell{
+      flex: 1 1 0px;
+    }
+    .small-6{
+      width: 50%;
+    }
+    .auto{
+      width: auto;
+      flex: 1 1 0px;
+    }
+    
+    /* Minimal table styling here */
+    .header{
+      cursor: pointer;
+      color: white;
+      margin-bottom: 1px;
+    }
+    .header .cell{
+      margin-right: 1px;
+      padding: 5px;
+      background-color: #8fd0bf;
+    }    
+    .body{
+      margin-bottom: 1px;
+    }
+    .body .cell{
+      margin-right: 1px;
+      padding: 5px;
+      background-color: #dff0df;
+    }
+    
+    .searchy{
+      padding: 10px;
+      display: flex;
+    }
+    .button{
+      display: block;
+      padding: 5px;
+      background-color: #dff0df;
+      border: 2px solid black;
+      cursor: pointer;
+      
+      margin-left: 5px;
+    }
+    .input-field{
+      display: block;
+      padding: 5px;
+      border: 2px solid black;
+    }
+  </style>
+  
+  <div class="searchy">
+    <input id="SearchField" class="input-field" type="text" onchange="FilterRows();">
+    <a class="button" onclick="FilterRows();">Filter</a>
+  </div>
+  
+  <div class="grid-x align-stretch header sortable-row">
+    <!-- Three columns where each have a unique name; firstname, surname, age. -->
+    <div class="small-6 cell firstname">
+      <div onclick="SortRowsBy('firstname', false);">Name</div>
+    </div>
+    <div class="auto cell surname">
+      <div onclick="SortRowsBy('surname', false);">Surname</div>
+    </div>
+    <div class="auto cell age">
+      <div onclick="SortRowsBy('age', false);">Age</div>
+    </div>
+  </div>
+  <div id="LotsOfRows">
+    <!-- Here go three example-rows  -->
+    <div class="grid-x align-stretch body sortable-row even">
+      <div class="hidden-data" firstname="sven" surname="knastersson" age="42"></div>
+      <div class="small-6 cell firstname">
+        Sven
+      </div>
+      <div class="auto cell surname">
+        Knastersson
+      </div>
+      <div class="auto cell age">
+        42 years
+      </div>  
+    </div>
+    <div class="grid-x align-stretch body sortable-row odd">
+      <div class="hidden-data" firstname="erik" surname="sunesson" age="36"></div>
+      <div class="small-6 cell firstname">
+        Erik
+      </div>
+      <div class="auto cell surname">
+        Sunesson
+      </div>
+      <div class="auto cell age">
+        36 years
+      </div>  
+    </div>
+    <div class="grid-x align-stretch body sortable-row even">
+      <div class="hidden-data" firstname="filip" surname="sunesson" age="14"></div>
+      <div class="small-6 cell firstname">
+        Filip
+      </div>
+      <div class="auto cell surname">
+        Sunesson
+      </div>
+      <div class="auto cell age">
+        14 years
+      </div>  
+    </div>    
+  </div>
+  
+  <script>
+    var sortMode = "none";       // Default is to not sort, put rows as they come.
+    var sortDirection = "desc";  // All sorting is reversible.
+    
+    var filterString = "";
+    var filterOn = "all"; // "surname";   // 'all' means filter on every column, showing the row if any of the columns match.
+    
+    var jqLotsOfRows = null;
+    var allRows = null;
+    
+    // Make sure to define all tables fields datatype here. Only two datatypes: String-comparison and number-comparison.
+    var dataTypes = {
+      firstname: "string",
+      surname: "string",
+      age: "number"
+    };
+
+    $(function(){
+      jqLotsOfRows = $("#LotsOfRows");
+      allRows = jqLotsOfRows.children(".body");
+    });
+
+    function SortRowsBy(sorty, justUpdate)
+    {
+      if(sortMode != "none")
+      {
+        var elm = $(".sortable-row.header").find("." + sortMode);
+            
+        elm.removeClass("selected");
+        elm.removeClass("asc");
+        elm.removeClass("desc");
+      }
+      
+      if(justUpdate == false)
+      {
+        if(sortMode == sorty)
+        {
+          if(sortDirection == "desc")
+          {
+            sortDirection = "asc";
+          }
+          else
+          {
+            sortDirection = "desc";
+          }
+        }
+        else
+        {
+          sortMode = sorty;
+          sortDirection = "desc";
+        }
+      }
+
+      var elm = $(".sortable-row.header").find("." + sortMode);
+      elm.addClass("selected " + sortDirection);
+      
+      SortRows();
+    }
+    function SortRows()
+    {
+      // We have a list of rows already. Remove them all and insert them again one by one with InsertRowSorted(row);
+     
+      // Fetch and detach all rows excluding the header-row.
+      jqLotsOfRows.children(".body").detach();
+      var children = allRows; // Using the never-changing set of all rows.
+
+      // Small timeout for visually showing everythig goes empty before filling up the list again.
+      setTimeout(function(){
+        if(children.length > 0)
+        {
+          // Insert them again, sorted.
+          children.each(function(index){
+            InsertRowSorted($(this));
+          });
+        }
+      }, 10);
+    }
+    function InsertRowSorted(row)
+    {
+      if(filterString != "")
+      {
+        var filterFields = [];
+        if(filterOn == "all")
+        {
+          filterFields = Object.keys(dataTypes);
+        }
+        else
+        {
+          filterFields.push(filterOn);
+        }
+
+        var fs = filterString.toLowerCase();
+        
+        var rowShouldBeIncluded = false;
+        for(var i=0; i<filterFields.length; i++)
+        {
+          var attr = row.children(".hidden-data").attr(filterFields[i]);
+          
+          if(attr.indexOf(fs) != -1)
+          {
+            // Column is in the search, so include row.
+            rowShouldBeIncluded = true;
+            break;
+          }
+        }
+        
+        if(rowShouldBeIncluded == false)
+        {
+          return;
+        }
+      }
+      
+      if(sortMode == "none" || jqLotsOfRows.children().length == 0)
+      {
+        // No sorting mode selected, or first row inserted.
+        jqLotsOfRows.append(row);
+      }
+      else
+      {
+        // Fetch bigger element and insert row before.
+        var beforeThis = GetRowBiggerThan(row);
+        
+        if(beforeThis == null)
+        {
+          jqLotsOfRows.append(row);
+        }
+        else
+        {
+          row.insertBefore(beforeThis);
+        }
+      }
+    }
+    function GetRowBiggerThan(row)
+    {
+      // Find the element 'bigger' than row and return it.
+      // This is based on which sorting-mode is currently selected.
+      // If no element are 'bigger', null is returned, indicating it should be inserted last.
+      
+      var newVal = FetchSortingFieldValue(row);
+      
+      // Fetch all rows excluding the header-row.
+      var children = jqLotsOfRows.children(".body");
+
+      var beforeThis = null;
+      
+      children.each(function(index){
+        var lVal = FetchSortingFieldValue(this);
+        
+        if(sortDirection == "asc")
+        {
+          if(newVal <= lVal)
+          {
+            // New row is smaller than this row, so insert before this row.
+            beforeThis = this;
+            return false;
+          }
+        }
+        else // desc
+        {
+          if(newVal >= lVal)
+          {
+            // New row is bigger than this row, so insert before this row.
+            beforeThis = this;
+            return false;
+          }
+        }
+      });
+      
+      return beforeThis;
+    }
+    function FetchSortingFieldValue(row)
+    {
+      // Returns the row's value to sort on.
+      if(sortMode == "none")
+        return 0;
+      
+      var val = $(row).children(".hidden-data").attr(sortMode);
+      
+      if(dataTypes[sortMode] == "string")
+      {
+        return val;
+      }
+      else // number
+      {
+        return parseInt(val);
+      }
+    }
+
+    function FilterRows()
+    {
+      filterString = $("#SearchField").val();
+      SortRowsBy('', true);
+    }
+  </script>
+</body>
+</html>
