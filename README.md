@@ -12,4 +12,5 @@ To define your own table:
   
   That's it! You should not need to change anything in the javascript-functions for the sorting and filtering to work.
 
+Screen dump: 
 ![Screen dump](https://github.com/Snorvarg/js_sortable_list/blob/master/screenshot.png?raw=true "Screen dump")
